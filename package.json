@@ -1,0 +1,40 @@
+{
+  "name": "@hugoabernier/create-sharepoint",
+  "version": "1.0.0",
+  "description": "Scaffold SPFx 1.21.1 from a tokenized template (no Yeoman).",
+  "type": "module",
+  "bin": {
+    "create-sharepoint": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "change-case": "^4.1.2",
+    "fast-glob": "^3.3.2",
+    "fs-extra": "^11.2.0",
+    "prompts": "^2.4.2",
+    "uuid": "^9.0.1",
+    "which-pm-runs": "^1.1.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^24.3.1",
+    "@types/prompts": "^2.4.9",
+    "@types/uuid": "^10.0.0",
+    "@types/which-pm-runs": "^1.0.2",
+    "typescript": "^5.9.2"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "name": "{{SOLUTION_NAME}}",
+  "version": "1.0.0",
+  "private": true,
+  "description": "{{COMPONENT_DESC}}",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "serve": "gulp serve",
+    "build": "gulp bundle",
+    "clean": "gulp clean",
+    "bundle": "gulp bundle",
+    "package": "gulp package-solution",
+    "test": "gulp test"
+  },
+  "dependencies": {
+    "@microsoft/sp-core-library": "1.21.1",
+    "@microsoft/sp-lodash-subset": "1.21.1",
+    "@microsoft/sp-property-pane": "1.21.1",
+    "@microsoft/sp-webpart-base": "1.21.1",
+    "@microsoft/sp-office-ui-fabric-core": "1.21.1",
+    "react": "17.0.1",
+    "react-dom": "17.0.1"
+  },
+  "devDependencies": {
+    "@microsoft/sp-build-web": "1.21.1",
+    "@microsoft/sp-module-interfaces": "1.21.1",
+    "@microsoft/eslint-config-spfx": "1.21.1",
+    "@types/react": "17.0.62",
+    "@types/react-dom": "17.0.20",
+    "eslint": "^8.57.0",
+    "gulp": "4.0.2",
+    "typescript": "5.3.3"
+  }
+}

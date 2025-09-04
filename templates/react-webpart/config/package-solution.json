@@ -1,0 +1,20 @@
+{
+    "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+    "solution": {
+        "name": "{{SOLUTION_TITLE}}",
+        "id": "{{SOLUTION_ID}}",
+        "version": "1.0.0.0",
+        "includeClientSideAssets": true,
+        "features": [
+            {
+                "title": "{{SOLUTION_TITLE}} Feature",
+                "description": "{{COMPONENT_DESC}}",
+                "id": "{{FEATURE_ID}}",
+                "version": "1.0.0.0"
+            }
+        ]
+    },
+    "paths": {
+        "zippedPackage": "solution/{{SOLUTION_NAME}}.sppkg"
+    }
+}
