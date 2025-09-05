@@ -85,6 +85,8 @@ function renderContent(text, tokens) {
  */
 async function renderTemplateDir(templateDir, targetDir, tokens) {
     const patterns = ["**/*", "!**/node_modules/**"];
+    console.log("TEMPLATE ROOT:", templateDir);
+    console.log("DIR ENTRIES (level 1):", fs.readdirSync(templateDir));
     const entries = await fg(patterns, { cwd: templateDir, dot: true, onlyFiles: false });
     for (const rel of entries) {
         const src = path.join(templateDir, rel);
