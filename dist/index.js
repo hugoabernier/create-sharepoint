@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import prompts from "prompts";
 import fs from "fs";
 import fse from "fs-extra";
@@ -14,7 +13,6 @@ import { sentenceCase } from "change-case";
 // -------- path helpers
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-// --- helpers: place near top-level utilities ---
 function isDirEmpty(dir) {
     if (!fs.existsSync(dir))
         return true;
@@ -47,7 +45,7 @@ function getTemplateDir(answers) {
     throw new Error(`Templates not found.\nTried:\n  ${a}\n  ${b}\n  ${c}`);
 }
 function findTemplateDir() {
-    // 1) Built layout: dist/<here>/template
+    // 1) Built layout: dist/<here>/templates
     const built = path.resolve(__dirname, "templates");
     if (fs.existsSync(built))
         return built;

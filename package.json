@@ -16,6 +16,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "postbuild": "node ./scripts/copy-templates.mjs",
     "prepublishOnly": "npm run build"
   },
   "engines": {

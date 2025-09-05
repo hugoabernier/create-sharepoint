@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import prompts from "prompts";
 import fs from "fs";
 import fse from "fs-extra";
@@ -17,7 +16,6 @@ import { sentenceCase } from "change-case";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// --- helpers: place near top-level utilities ---
 function isDirEmpty(dir: string): boolean {
   if (!fs.existsSync(dir)) return true;
   const entries = fs.readdirSync(dir).filter(n => n !== ".git" && n !== ".gitkeep");
@@ -52,7 +50,7 @@ function getTemplateDir(answers: Record<string, any>): string {
 }
 
 function findTemplateDir() {
-    // 1) Built layout: dist/<here>/template
+    // 1) Built layout: dist/<here>/templates
     const built = path.resolve(__dirname, "templates");
     if (fs.existsSync(built)) return built;
 
