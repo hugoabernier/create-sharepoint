@@ -17,10 +17,34 @@ import { sentenceCase } from "change-case";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-function getTemplateDir() {
-    const a = path.join(__dirname, "..", "templates", "react-webpart");
-    const b = path.join(__dirname, "templates", "react-webpart");
-    const c = path.join(__dirname, "..", "..", "templates", "react-webpart");
+// --- helpers: place near top-level utilities ---
+function isDirEmpty(dir: string): boolean {
+  if (!fs.existsSync(dir)) return true;
+  const entries = fs.readdirSync(dir).filter(n => n !== ".git" && n !== ".gitkeep");
+  return entries.length === 0;
+}
+
+
+function getTemplateDir(answers: Record<string, any>): string {
+
+    let templateSubdir = "webpart";
+    switch (answers.componentType) {
+        case "extension":
+            templateSubdir = "extension";
+            break;
+        case "library":
+            templateSubdir = "library";
+            break;
+        case "ace":
+            templateSubdir = "adaptive-card-extension";
+            break;
+    }
+
+    let templateVariant = answers.template || "react";
+
+    const a = path.join(__dirname, "..", "templates", templateSubdir, templateVariant);
+    const b = path.join(__dirname, "templates", templateSubdir, templateVariant);
+    const c = path.join(__dirname, "..", "..", "templates", templateSubdir, templateVariant);
     if (fs.existsSync(a)) return a;
     if (fs.existsSync(b)) return b;
     if (fs.existsSync(c)) return c;
@@ -114,33 +138,41 @@ function pascalToCamel(str: string): string {
 function printSplash() {
   if (!process.stdout.isTTY) return; // skip in non-interactive CI
   const art = String.raw`
-..................................................
-..................::======-.......................
-...............=*###########*=....................
-.............=*###%#%####*#####*..................
-............*###%%########*#*###*-................
-...........*##%#########***+++***+:...............
-..........:#%#*********++=-----===-...............
-..........-*#***++==-----::::---=+-...............
-..........:*##**+=------::::----==-...............
-...........+###**+==------::-----=-...............
-...........=####*++==----::::----==-:.............
-............*###*+====-----========-:.............
-..........:*#####*+++**+=--=+*+===--:.............
-...........*##**##*++=+#+--==-----==:.............
-...........:###**++===+**-:-------=-..............
-............:####*+=--=**-:---=--==:..............
-..............:+##*===+*#%+==--====:..............
-...............-###+==+++===--==-==:..............
-................+#*#==+******+=-==-...............
-...............:+#***++++++===--===---::..........
-.............:=+####*#*++==-----==+==-==---:::....
-...........-=+**#######**++===========-=====----::
-........:-===+++**++++***++=======+++=======-====-
-::...:-=====+==++**++==+++++=====+*++=-==========-
-:::-========+=++++**+====+++=====+#++-==-=+=======
-:-===========++==+++++========-==*+*+====-========
-===========+==+==+++++===-------*+++*++++==+======`;
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@#+##@@@@@@@@@%**@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@#=-=@@@@@@@@@*=-+@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@%+=%@@@@@@@@#*+=@@@@@@@@@@#**@@@@@@@@@@@@
+@@@@@@@@@@@+=%@@@@@%%%%**@@@@@@@@@@+=#@@@@@@@@@@@@
+@@@@@@@@@@@%+-**+*%%%%@%%##%%@@@@#*#%@@@@@@@@@@@@@
+@@@@@@@@@@@@%*=-=*@@@%%%@%%@*==*+=#@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@%%%%@@@@%*+#@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@%%%%@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@%##@@@@@@@@@@@@%%%###%@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@%%@@@@@%###**********@@@@@
+@@@@@@@@@@@@@@@@@@@@%%%%%%@@#+-::+**********#@@@@@
+@@@@@@@@@@@@@@@@@@@@%%%@@@*-:....-**********%@@@@@
+@@@@@@@@@@@@@@@@@@@@@%%@@#-.......:+********@@@@@@
+@@@@@@@@@@@@@@@@@@@@@%#@+:...:::...:-+*****#@@@@@@
+@@@@@@@@@@@@@@@@@@@@@%#=::::+*#**=...:-=++*@@@@@@@
+@@@@@@@@@@@@@@@@@@@%%%*::::+##*###-::::::-#@@@@@@@
+@@@@@@@@@@@@@%%###*+@%=::::=*####*::::::-#@@@@@@@@
+@@@@@@@@@@%#*****+=%@#-:::::-=++=::::::-#@@@@@@@@@
+@@@@@@@@#*******+-+@@+=+=-:::::::::::-=%@@@@@@@@@@
+@@@@@@@@@@%%#**+=-*@%*###*----------=#@@@@@@@@@@@@
+@@@@@@@@@@@@@@%=--#@#+*##*--------=#@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@%=--%@*--==-------+#@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@%#*=--*%+--------=+%@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@#***+=-=**-----=++*#@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@*==*****++=+++++*****#@@@@@@@@@@@@@@@@@@@
+@@@@@@@#--+********%@@@@#*****%@@@@@@@@@@@@@@@@@@@
+@@@@@@#:-++++*++#%%@@@@@@****#@@@@@@@@@@@@@@@@@@@@
+@@@@@@-:===+===#@@@@@@@@@#**%@@@@@@@@@@@@@@@@@@@@@
+@@@@@*::----+#@@@@@@@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@+-=+*#%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@`;
   // Optional clear screen (comment out if you prefer no clear):
   process.stdout.write("\x1Bc");
   console.log(art);
@@ -162,10 +194,72 @@ async function main() {
         console.warn(`SPFx 1.21.x expects Node 22 LTS; you're on ${process.version}.`);
     }
 
+    // Parse first positional arg as the folder name (ignore flags)
+    const argName = process.argv.slice(2).find(a => !a.startsWith("-"));
+
+    // Compute a safe default from cwd
+    const cwdBase = path.basename(process.cwd());
+    const safeDefault = cwdBase.replace(/[^a-zA-Z0-9-_]/g, "") || "my-spfx-solution";
+
     // TODO: Default the solution name to the current folder name?
     const cwdName = path.basename(process.cwd());
     const answers = await prompts([
-        { type: "text", name: "solutionName", message: "What is your solution name?", initial: cwdName => cwdName?.replace(/[^a-zA-Z0-9-_]/g, "") || "my-spfx-solution", validate: v => /^[a-zA-Z0-9-_]+$/.test(v) ? true : "Alphanumerics, dash, underscore only." },
+        {   type: "text", 
+            name: "solutionName", 
+            message: "What is your solution name?", 
+            initial: safeDefault, 
+            validate: v => /^[a-zA-Z0-9-_]+$/.test(v) ? true : "Alphanumerics, dash, underscore only." 
+        },
+        {
+            type: "select",
+            name: "componentType",
+            message: "Which type of client-side component do you wish to create?",
+            choices: [
+                { title: "WebPart", value: "webpart" },
+                { title: "Extension", value: "extension" },
+                { title: "Library", value: "library" },
+                { title: "Adaptive Card Extension", value: "ace" }
+            ],
+            initial: 0
+        },
+        {
+            // only ask this if componentType === "webpart"
+            type: prev => (prev === "webpart" ? "select" : null),
+            name: "template",
+            message: "Which template would you like to use?",
+            choices: [
+                { title: "Minimal", value: "minimal" },
+                { title: "No framework", value: "no-framework" },
+                { title: "React", value: "react" }
+            ],
+            initial: 0
+        },
+        {
+            // only ask this if componentType === "extension"
+            type: prev => (prev === "extension" ? "select" : null),
+            name: "template",
+            message: "Which type of client-side extension would you like to create?",
+            choices: [
+                { title: "Application Customizer", value: "app-customizer" },
+                { title: "Field Customizer", value: "field-customizer" },
+                { title: "ListView Command Set", value: "listview-command-set" },
+                { title: "Form Customizer", value: "form-customizer" },
+                { title: "Search Query Modifier", value: "search-query-modifier" },
+            ],
+            initial: 0
+        },
+        {
+            // only ask this if componentType === "ace"
+            type: prev => (prev === "ace" ? "select" : null),
+            name: "template",
+            message: "Which template do you want to use?",
+            choices: [
+                { title: "Generic Card Template", value: "generic-card" },
+                { title: "Search Card Template", value: "search-card" },
+                { title: "Data Visualization Template", value: "data-visualization" },
+            ],
+            initial: 0
+        },
         { type: "text", name: "componentName", message: "What is your Web part name?", initial: "HelloWorld", validate: v => /^[A-Za-z]\w*$/.test(v) ? true : "Start with a letter; alphanumerics/underscore only." },
         { type: "toggle", name: "install", message: "Install dependencies?", initial: true, active: "yes", inactive: "no" }
     ], { onCancel: () => process.exit(1) });
@@ -184,8 +278,10 @@ async function main() {
         COMPONENT_CAMEL: pascalToCamel(componentPascal)
     };
 
-    const templateDir = getTemplateDir();
-    const targetDir = path.resolve(process.cwd(), solutionName);
+    const templateDir = getTemplateDir(answers);
+    
+    const targetDir = path.resolve(process.cwd(), solutionName === "." ? "" : solutionName);
+
 
     if (fs.existsSync(targetDir) && fs.readdirSync(targetDir).length > 0) {
         console.error(`Target directory "${solutionName}" is not empty.`);

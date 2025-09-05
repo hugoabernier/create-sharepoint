@@ -1,0 +1,35 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx/client-side-component-manifest.schema.json",
+  "id": "{{COMPONENT_ID}}",
+  "alias": "{{COMPONENT_PASCAL}}WebPart",
+  "componentType": "WebPart",
+  // The "*" signifies that the version should be taken from the package.json
+  "version": "*",
+  "manifestVersion": 2,
+  "supportsThemeVariants": true,
+  "requiresCustomScript": false,
+  "supportedHosts": [
+    "SharePointWebPart",
+    "TeamsPersonalApp",
+    "TeamsTab",
+    "SharePointFullPage"
+  ],
+  "preconfiguredEntries": [
+    {
+      "groupId": "5c03119e-3074-46fd-976b-c60198311f70",
+      "group": {
+        "default": "Advanced"
+      },
+      "title": {
+        "default": "{{COMPONENT_PASCAL}}"
+      },
+      "description": {
+        "default": ""
+      },
+      "officeFabricIconFontName": "Page",
+      "properties": {
+        "description": ""
+      }
+    }
+  ]
+}
