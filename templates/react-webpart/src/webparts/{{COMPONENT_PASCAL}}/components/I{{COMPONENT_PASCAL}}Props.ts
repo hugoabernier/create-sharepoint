@@ -1,6 +1,7 @@
-import { WebPartContext } from '@microsoft/sp-webpart-base';
-
 export interface I{{COMPONENT_PASCAL}}Props {
-  context: WebPartContext;
-  description?: string;
+  description: string;
+  isDarkTheme: boolean;
+  environmentMessage: string;
+  hasTeamsContext: boolean;
+  userDisplayName: string;
 }

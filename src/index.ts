@@ -5,100 +5,213 @@ import fse from "fs-extra";
 import path from "path";
 import fg from "fast-glob";
 import { v4 as uuidv4 } from "uuid";
-import { paramCase, pascalCase, sentenceCase } from "change-case";
-
-
 import whichPmRuns from "which-pm-runs";
 import { spawn } from "child_process";
+import { fileURLToPath } from "url";
+import { paramCase } from "change-case";
+import { pascalCase } from "change-case";
+import { sentenceCase } from "change-case";
+
+
+// -------- path helpers
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+function getTemplateDir() {
+    const a = path.join(__dirname, "..", "templates", "react-webpart");
+    const b = path.join(__dirname, "templates", "react-webpart");
+    const c = path.join(__dirname, "..", "..", "templates", "react-webpart");
+    if (fs.existsSync(a)) return a;
+    if (fs.existsSync(b)) return b;
+    if (fs.existsSync(c)) return c;
+    throw new Error(`Templates not found.\nTried:\n  ${a}\n  ${b}\n  ${c}`);
+}
+
+// -------- token helpers
+// tiny helper (avoids String.replaceAll typing shenanigans)
+const rep = (s: string, a: string, b: string) => s.split(a).join(b);
+
+// Templating for PATHS (supports {{TOKEN}} and {{token}} for convenience)
+function renderPath(relPath: string, tokens: Record<string, string>) {
+    let out = relPath;
+    for (const [K, v] of Object.entries(tokens)) {
+        out = rep(out, `{{${K}}}`, v);
+        out = rep(out, `{{${K.toLowerCase()}}}`, v);
+    }
+    return out;
+}
+
+// Templating for CONTENT (case-insensitive tokens)
+function renderContent(text: string, tokens: Record<string, string>) {
+    return text.replace(/\{\{([A-Za-z0-9_]+)\}\}/g, (_, raw) => {
+        const key = String(raw).toUpperCase();
+        return tokens[key] ?? `{{${raw}}}`;
+    });
+}
+
+/**
+ * Renders the template directory into the target directory.
+ * - Computes FINAL destination path per file (no in-place renames)
+ * - Replaces tokens in file contents
+ * - Copies binary files as-is (no tokenization)
+ */
+async function renderTemplateDir(templateDir: string, targetDir: string, tokens: Record<string, string>) {
+    const patterns = ["**/*", "!**/node_modules/**"];
+    const entries = await fg(patterns, { cwd: templateDir, dot: true, onlyFiles: false });
+
+    for (const rel of entries) {
+        const src = path.join(templateDir, rel);
+        const stat = fs.statSync(src);
+
+        // Compute final path up front (this is the key difference!)
+        const destRel = renderPath(rel, tokens);
+        const dest = path.join(targetDir, destRel);
+
+        if (stat.isDirectory()) {
+            await fse.ensureDir(dest);
+            continue;
+        }
+
+        // Decide if we treat as text or binary by extension
+        const isBinary =
+            /\.(png|jpe?g|gif|bmp|ico|webp|woff2?|ttf|eot|pdf)$/i.test(rel);
+
+        await fse.ensureDir(path.dirname(dest));
+
+        if (isBinary) {
+            await fse.copy(src, dest);
+        } else {
+            const txt = fs.readFileSync(src, "utf8");
+            const rendered = renderContent(txt, tokens);
+            fs.writeFileSync(dest, rendered, "utf8");
+        }
+    }
+}
+
+// -------- utils
 
 function run(cmd: string, args: string[], cwd?: string) {
     return new Promise<void>((resolve, reject) => {
         const child = spawn(cmd, args, { cwd, stdio: "inherit", shell: process.platform === "win32" });
-        child.on("exit", (code) => (code === 0 ? resolve() : reject(new Error(`${cmd} failed`))));
+        child.on("exit", (code) => (code === 0 ? resolve() : reject(new Error(`${cmd} ${args.join(" ")} failed (${code})`))));
     });
 }
 
-function detectPM() {
+function detectPM(): "pnpm" | "yarn" | "npm" {
     const pm = whichPmRuns()?.name;
     return pm === "pnpm" || pm === "yarn" ? pm : "npm";
 }
 
-function replaceTokens(text: string, tokens: Record<string, string>) {
-    return text.replace(/\{\{([A-Z0-9_]+)\}\}/g, (_, k) => tokens[k] ?? `{{${k}}}`);
+
+
+function pascalToCamel(str: string): string {
+    return str.charAt(0).toLowerCase() + str.slice(1);
 }
 
+
+
+
+function printSplash() {
+  if (!process.stdout.isTTY) return; // skip in non-interactive CI
+  const art = String.raw`
+..................................................
+..................::======-.......................
+...............=*###########*=....................
+.............=*###%#%####*#####*..................
+............*###%%########*#*###*-................
+...........*##%#########***+++***+:...............
+..........:#%#*********++=-----===-...............
+..........-*#***++==-----::::---=+-...............
+..........:*##**+=------::::----==-...............
+...........+###**+==------::-----=-...............
+...........=####*++==----::::----==-:.............
+............*###*+====-----========-:.............
+..........:*#####*+++**+=--=+*+===--:.............
+...........*##**##*++=+#+--==-----==:.............
+...........:###**++===+**-:-------=-..............
+............:####*+=--=**-:---=--==:..............
+..............:+##*===+*#%+==--====:..............
+...............-###+==+++===--==-==:..............
+................+#*#==+******+=-==-...............
+...............:+#***++++++===--===---::..........
+.............:=+####*#*++==-----==+==-==---:::....
+...........-=+**#######**++===========-=====----::
+........:-===+++**++++***++=======+++=======-====-
+::...:-=====+==++**++==+++++=====+*++=-==========-
+:::-========+=++++**+====+++=====+#++-==-=+=======
+:-===========++==+++++========-==*+*+====-========
+===========+==+==+++++===-------*+++*++++==+======`;
+  // Optional clear screen (comment out if you prefer no clear):
+  process.stdout.write("\x1Bc");
+  console.log(art);
+  console.log("\nWelcome to the Microsoft 365 SPFx Generator@1.21.1");
+  console.log("──────────────────────────────────────────────────\n");
+}
+
+
+
+// -------- main
+
 async function main() {
-    // Node guard
+    const noSplash = process.argv.includes("--no-splash");
+    if (!noSplash) printSplash();
+
+    // Optional guard: SPFx 1.21.x is fine on Node 22, warn if not
     const major = parseInt(process.versions.node.split(".")[0], 10);
     if (major !== 22) {
-        console.warn("⚠️ SPFx 1.21.1 is tested with Node 22.x. You are on " + process.version);
+        console.warn(`SPFx 1.21.x expects Node 22 LTS; you're on ${process.version}.`);
     }
 
-    // Prompts
+    // TODO: Default the solution name to the current folder name?
+    const cwdName = path.basename(process.cwd());
     const answers = await prompts([
-        { type: "text", name: "solutionName", message: "Solution name", initial: "spfx-solution" },
-        { type: "text", name: "componentName", message: "Web part name", initial: "HelloWorld" },
-        { type: "text", name: "description", message: "Description", initial: "A great SPFx web part." },
+        { type: "text", name: "solutionName", message: "What is your solution name?", initial: cwdName => cwdName?.replace(/[^a-zA-Z0-9-_]/g, "") || "my-spfx-solution", validate: v => /^[a-zA-Z0-9-_]+$/.test(v) ? true : "Alphanumerics, dash, underscore only." },
+        { type: "text", name: "componentName", message: "What is your Web part name?", initial: "HelloWorld", validate: v => /^[A-Za-z]\w*$/.test(v) ? true : "Start with a letter; alphanumerics/underscore only." },
         { type: "toggle", name: "install", message: "Install dependencies?", initial: true, active: "yes", inactive: "no" }
-    ]);
+    ], { onCancel: () => process.exit(1) });
 
     const solutionName = paramCase(answers.solutionName);
     const componentPascal = pascalCase(answers.componentName);
     const solutionTitle = sentenceCase(answers.solutionName);
 
     const tokens = {
-        "SOLUTION_NAME": solutionName,
-        "SOLUTION_TITLE": solutionTitle,
-        "SOLUTION_ID": uuidv4().toUpperCase(),
-        "FEATURE_ID": uuidv4().toUpperCase(),
-        "COMPONENT_PASCAL": componentPascal,
-        "COMPONENT_DESC": answers.description,
-        "COMPONENT_ID": uuidv4().toUpperCase()
+        SOLUTION_NAME: solutionName,
+        SOLUTION_TITLE: solutionTitle,
+        SOLUTION_ID: uuidv4().toUpperCase(),
+        FEATURE_ID: uuidv4().toUpperCase(),
+        COMPONENT_PASCAL: componentPascal,
+        COMPONENT_ID: uuidv4().toUpperCase(),
+        COMPONENT_CAMEL: pascalToCamel(componentPascal)
     };
 
-    // Paths
-    const templateDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..", "templates", "react-webpart");
+    const templateDir = getTemplateDir();
     const targetDir = path.resolve(process.cwd(), solutionName);
 
-    if (fs.existsSync(targetDir)) {
-        console.error(`❌ Directory ${solutionName} already exists.`);
+    if (fs.existsSync(targetDir) && fs.readdirSync(targetDir).length > 0) {
+        console.error(`Target directory "${solutionName}" is not empty.`);
         process.exit(1);
     }
 
-    // Copy template
-    await fse.copy(templateDir, targetDir);
+    console.log(`\nCreating ${solutionName} in ${targetDir}...\n`);
 
-    // Rename tokenized dirs/files
-    const entries = await fg(["**/*"], { cwd: targetDir, dot: true, onlyFiles: false });
-    for (const rel of entries.sort((a, b) => b.length - a.length)) {
-        const renamed = rel.replaceAll("{{COMPONENT_PASCAL}}", tokens["COMPONENT_PASCAL"]);
-        if (renamed !== rel) await fse.move(path.join(targetDir, rel), path.join(targetDir, renamed));
-    }
+    await renderTemplateDir(templateDir, targetDir, tokens);
 
-    // Replace tokens in file contents
-    const textFiles = await fg(["**/*", "!node_modules/**"], { cwd: targetDir });
-    for (const rel of textFiles) {
-        const full = path.join(targetDir, rel);
-        if (fs.statSync(full).isDirectory()) continue;
-        const txt = fs.readFileSync(full, "utf8");
-        const replaced = replaceTokens(txt, tokens);
-        if (replaced !== txt) fs.writeFileSync(full, replaced, "utf8");
-    }
-
-    // Install deps
     if (answers.install) {
         const pm = detectPM();
-        console.log(`📦 Installing with ${pm}...`);
+        console.log(`\nInstalling dependencies with ${pm}...\n`);
         try {
             if (pm === "pnpm") await run("pnpm", ["install"], targetDir);
             else if (pm === "yarn") await run("yarn", [], targetDir);
             else await run("npm", ["install"], targetDir);
         } catch {
-            console.warn("⚠️ Install failed. Run it manually.");
+            console.warn("Install failed. Run it manually later.");
         }
     }
 
-    console.log(`✅ Done! cd ${solutionName} && gulp serve`);
+    console.log(`\nCongratulations!\nSolution ${solutionName} is created.\nNext steps:\n  cd ${solutionName}\n  gulp serve\n`);
 }
 
-main();
+main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+});

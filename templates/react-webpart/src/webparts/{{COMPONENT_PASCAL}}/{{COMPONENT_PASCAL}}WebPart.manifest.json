@@ -3,7 +3,8 @@
   "id": "{{COMPONENT_ID}}",
   "alias": "{{COMPONENT_PASCAL}}WebPart",
   "componentType": "WebPart",
-  "version": "1.0.0",
+  // The "*" signifies that the version should be taken from the package.json
+  "version": "*",
   "manifestVersion": 2,
   "supportsThemeVariants": true,
   "requiresCustomScript": false,
@@ -17,16 +18,18 @@
     {
       "groupId": "5c03119e-3074-46fd-976b-c60198311f70",
       "group": {
-        "default": "Under Development"
+        "default": "Advanced"
       },
       "title": {
         "default": "{{COMPONENT_PASCAL}}"
       },
       "description": {
-        "default": "{{COMPONENT_DESC}}"
+        "default": ""
       },
-      "officeFabricIconFontName": "WebPart",
-      "properties": {}
+      "officeFabricIconFontName": "Page",
+      "properties": {
+        "description": ""
+      }
     }
   ]
 }

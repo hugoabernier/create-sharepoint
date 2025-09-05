@@ -1,21 +1,6 @@
 {
-    "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/serve.schema.json",
-    "port": 4321,
-    "https": true,
-    "initialPage": "https://localhost:4321/temp/workbench.html",
-    "serveConfigurations": {
-        "default": {
-            "pageUrl": "https://localhost:4321/temp/workbench.html",
-            "customActions": {
-                "default": {
-                    "location": "ClientSideExtension.ApplicationCustomizer",
-                    "properties": {}
-                }
-            }
-        }
-    },
-    "api": {
-        "port": 5432,
-        "entryPath": "node_modules/@microsoft/sp-webpart-workbench/lib/api"
-    }
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/spfx-serve.schema.json",
+  "port": 4321,
+  "https": true,
+  "initialPage": "https://{tenantDomain}/_layouts/workbench.aspx"
 }

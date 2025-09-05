@@ -1,0 +1,40 @@
+{
+    "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+    "solution": {
+        "name": "my-spfx-solution-client-side-solution",
+        "id": "709770D5-5BD3-45C7-A6DD-565D3A9FD112",
+        "version": "1.0.0.0",
+        "includeClientSideAssets": true,
+        "skipFeatureDeployment": true,
+        "isDomainIsolated": false,
+        "developer": {
+          "name": "",
+          "websiteUrl": "",
+          "privacyUrl": "",
+          "termsOfUseUrl": "",
+          "mpnId": "Undefined-1.21.1"
+        },
+        "metadata": {
+          "shortDescription": {
+            "default": "my-spfx-solution description"
+          },
+          "longDescription": {
+            "default": "my-spfx-solution description"
+          },
+          "screenshotPaths": [],
+          "videoUrl": "",
+          "categories": []
+        },
+        "features": [
+            {
+                "title": "my-spfx-solution Feature",
+                "description": "The feature that activates elements of the my-spfx-solution solution.",
+                "id": "7A5A6F49-3F3C-4532-A005-BBCFC2150629",
+                "version": "1.0.0.0"
+            }
+        ]
+    },
+    "paths": {
+        "zippedPackage": "solution/my-spfx-solution.sppkg"
+    }
+}
