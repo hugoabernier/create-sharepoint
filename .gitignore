@@ -6,7 +6,6 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Build outputs
-dist/
 coverage/
 build/
 tmp/
@@ -33,3 +32,4 @@ logs/
 # package-lock.json
 # yarn.lock
 # pnpm-lock.yaml
+
