@@ -14,6 +14,13 @@ import { sentenceCase } from "change-case";
 // -------- path helpers
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+// --- helpers: place near top-level utilities ---
+function isDirEmpty(dir) {
+    if (!fs.existsSync(dir))
+        return true;
+    const entries = fs.readdirSync(dir).filter(n => n !== ".git" && n !== ".gitkeep");
+    return entries.length === 0;
+}
 function getTemplateDir(answers) {
     let templateSubdir = "webpart";
     switch (answers.componentType) {
