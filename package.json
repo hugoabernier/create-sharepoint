@@ -3,9 +3,9 @@
   "version": "1.0.1",
   "description": "Scaffold SPFx 1.21.1 from a tokenized template (no Yeoman).",
   "type": "module",
-  "bin": {
-    "create-sharepoint": "./dist/index.js"
-  },
+"bin": {
+  "create-sharepoint": "bin/create-sharepoint.js"
+},
   "files": [
     "dist/**/*",
     "bin/**/*",
@@ -20,7 +20,7 @@
     "prepublishOnly": "npm run build"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20"
   },
   "dependencies": {
     "change-case": "^4.1.2",
