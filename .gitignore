@@ -33,3 +33,7 @@ logs/
 # yarn.lock
 # pnpm-lock.yaml
 
+**/src/
+!templates/**/src/**
+
+
