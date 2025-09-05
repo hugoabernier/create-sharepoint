@@ -268,7 +268,7 @@ async function main() {
             console.warn("Install failed. Run it manually later.");
         }
     }
-    console.log(`\nCongratulations!\nSolution ${solutionName} is created.\nNext steps:\n  cd ${solutionName}\n  gulp serve\n`);
+    console.log(`\nCongratulations!\nSolution ${solutionName} is created.\nRun gulp serve to play with it!\n`);
 }
 main().catch((e) => {
     console.error(e);
