@@ -1,7 +1,0 @@
-templates/** -export-ignore
-templates/**/src/** -export-ignore
-templates/**/config/** -export-ignore
-templates/**/.vscode/** -export-ignore
-templates/**/.gitignore -export-ignore
-templates/**/.npmignore -export-ignore
-templates/**/tsconfig.json -export-ignore
