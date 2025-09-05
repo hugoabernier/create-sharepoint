@@ -35,9 +35,9 @@ function getTemplateDir(answers) {
             break;
     }
     let templateVariant = answers.template || "react";
-    const a = path.join(__dirname, "..", "templates", templateSubdir, templateVariant);
-    const b = path.join(__dirname, "templates", templateSubdir, templateVariant);
-    const c = path.join(__dirname, "..", "..", "templates", templateSubdir, templateVariant);
+    const a = path.join(findTemplateDir(), templateSubdir, templateVariant);
+    const b = path.join(findTemplateDir(), templateSubdir, templateVariant);
+    const c = path.join(findTemplateDir(), templateSubdir, templateVariant);
     if (fs.existsSync(a))
         return a;
     if (fs.existsSync(b))
@@ -45,6 +45,20 @@ function getTemplateDir(answers) {
     if (fs.existsSync(c))
         return c;
     throw new Error(`Templates not found.\nTried:\n  ${a}\n  ${b}\n  ${c}`);
+}
+function findTemplateDir() {
+    // 1) Built layout: dist/<here>/template
+    const built = path.resolve(__dirname, "templates");
+    if (fs.existsSync(built))
+        return built;
+    // 2) Repo layout: <repo>/template
+    const repoRoot = path.resolve(__dirname, ".."); // adjust if needed
+    const repo = path.resolve(repoRoot, "templates");
+    if (fs.existsSync(repo))
+        return repo;
+    throw new Error(`Template directory not found. Tried:
+  - ${built}
+  - ${repo}`);
 }
 // -------- token helpers
 // tiny helper (avoids String.replaceAll typing shenanigans)

@@ -1,0 +1,12 @@
+# Ignore everything except manually whitelisted files
+*
+
+# Whitelist essential files for npm package
+!package.json
+!README.md
+!LICENSE
+!dist/**
+!template/**
+
+# Include build script if needed
+!bin/**

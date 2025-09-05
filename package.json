@@ -7,8 +7,12 @@
     "create-sharepoint": "./dist/index.js"
   },
   "files": [
-    "dist",
-    "templates"
+    "dist/**/*",
+    "bin/**/*",
+    "template/**/*",
+    "package.json",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
