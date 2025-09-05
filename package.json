@@ -1,6 +1,6 @@
 {
   "name": "@hugoabernier/create-sharepoint",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Scaffold SPFx 1.21.1 from a tokenized template (no Yeoman).",
   "type": "module",
   "bin": {
