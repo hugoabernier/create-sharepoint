@@ -1,45 +1,42 @@
 {
   "name": "@hugoabernier/create-sharepoint",
-  "version": "1.0.1",
-  "description": "Scaffold SPFx 1.21.1 from a tokenized template (no Yeoman).",
+  "version": "1.1.0",
+  "description": "Modern create-style scaffolder for SPFx 1.21.x (new solution or add component).",
   "type": "module",
-"bin": {
-  "create-sharepoint": "bin/create-sharepoint.js"
-},
+  "bin": {
+    "create-sharepoint": "./dist/index.js"
+  },
   "files": [
-    "dist/**/*",
-    "bin/**/*",
-    "template/**/*",
-    "package.json",
-    "README.md",
-    "LICENSE"
+    "dist",
+    "templates"
   ],
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "author": "Hugo Bernier",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/<you>/create-sharepoint.git"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "postbuild": "node ./scripts/copy-templates.mjs",
     "prepublishOnly": "npm run build"
   },
-  "engines": {
-    "node": ">=20"
-  },
   "dependencies": {
-    "change-case": "^4.1.2",
-    "fast-glob": "^3.3.2",
+    "@inquirer/prompts": "^7.0.0",
     "fs-extra": "^11.2.0",
+    "kolorist": "^1.8.0",
+    "minimist": "^1.2.8",
     "prompts": "^2.4.2",
-    "uuid": "^9.0.1",
-    "which-pm-runs": "^1.1.0"
+    "semver": "^7.6.3"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
-    "@types/node": "^24.3.1",
+    "@types/minimist": "^1.2.5",
+    "@types/node": "^22",
     "@types/prompts": "^2.4.9",
-    "@types/uuid": "^10.0.0",
-    "@types/which-pm-runs": "^1.0.2",
-    "typescript": "^5.9.2"
-  },
-  "license": "MIT",
-  "publishConfig": {
-    "access": "public"
+    "@types/semver": "^7.7.1",
+    "typescript": "^5.5.4"
   }
 }

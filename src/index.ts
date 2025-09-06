@@ -1,328 +1,162 @@
-import prompts from "prompts";
-import fs from "fs";
-import fse from "fs-extra";
-import path from "path";
-import fg from "fast-glob";
-import { v4 as uuidv4 } from "uuid";
-import whichPmRuns from "which-pm-runs";
-import { spawn } from "child_process";
-import { fileURLToPath } from "url";
-import { paramCase } from "change-case";
-import { pascalCase } from "change-case";
-import { sentenceCase } from "change-case";
+#!/usr/bin/env node
+import path from "node:path";
+import fs from "node:fs";
+import minimist from "minimist";
+import { bold, cyan, green, red, yellow } from "kolorist";
+import { checkNodeForSpfx, ensureGulpInTemplate } from "./env.js";
+import { detectPM, installDeps } from "./pm.js";
+import { promptMissing } from "./prompts.js";
+import { showSplash } from "./splash.js";
+import { scaffoldNewSolution } from "./scaffold-solution.js";
+import { addComponent } from "./add-component.js";
+import { TemplateType } from "./templates.js";
 
+type PM = "npm" | "pnpm" | "yarn";
 
-// -------- path helpers
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-function isDirEmpty(dir: string): boolean {
-  if (!fs.existsSync(dir)) return true;
-  const entries = fs.readdirSync(dir).filter(n => n !== ".git" && n !== ".gitkeep");
-  return entries.length === 0;
+interface Options {
+    template?: TemplateType;
+    variant?: string;
+    name?: string;
+    pm?: PM;
+    install?: boolean;        // explicit true/false if provided
+    skipInstall?: boolean;    // alias for no-install
+    force?: boolean;
 }
-
-
-function getTemplateDir(answers: Record<string, any>): string {
-
-    let templateSubdir = "webpart";
-    switch (answers.componentType) {
-        case "extension":
-            templateSubdir = "extension";
-            break;
-        case "library":
-            templateSubdir = "library";
-            break;
-        case "ace":
-            templateSubdir = "adaptive-card-extension";
-            break;
-    }
-
-    let templateVariant = answers.template || "react";
-
-    const a = path.join(findTemplateDir(), templateSubdir, templateVariant);
-    const b = path.join(findTemplateDir(), templateSubdir, templateVariant);
-    const c = path.join(findTemplateDir(), templateSubdir, templateVariant);
-    if (fs.existsSync(a)) return a;
-    if (fs.existsSync(b)) return b;
-    if (fs.existsSync(c)) return c;
-    throw new Error(`Templates not found.\nTried:\n  ${a}\n  ${b}\n  ${c}`);
-}
-
-function findTemplateDir() {
-    // 1) Built layout: dist/<here>/templates
-    const built = path.resolve(__dirname, "templates");
-    if (fs.existsSync(built)) return built;
-
-    // 2) Repo layout: <repo>/template
-    const repoRoot = path.resolve(__dirname, ".."); // adjust if needed
-    const repo = path.resolve(repoRoot, "templates");
-    if (fs.existsSync(repo)) return repo;
-
-    throw new Error(`Template directory not found. Tried:
-  - ${built}
-  - ${repo}`);
-}
-
-// -------- token helpers
-// tiny helper (avoids String.replaceAll typing shenanigans)
-const rep = (s: string, a: string, b: string) => s.split(a).join(b);
-
-// Templating for PATHS (supports {{TOKEN}} and {{token}} for convenience)
-function renderPath(relPath: string, tokens: Record<string, string>) {
-    let out = relPath;
-    for (const [K, v] of Object.entries(tokens)) {
-        out = rep(out, `{{${K}}}`, v);
-        out = rep(out, `{{${K.toLowerCase()}}}`, v);
-    }
-    return out;
-}
-
-// Templating for CONTENT (case-insensitive tokens)
-function renderContent(text: string, tokens: Record<string, string>) {
-    return text.replace(/\{\{([A-Za-z0-9_]+)\}\}/g, (_, raw) => {
-        const key = String(raw).toUpperCase();
-        return tokens[key] ?? `{{${raw}}}`;
-    });
-}
-
-/**
- * Renders the template directory into the target directory.
- * - Computes FINAL destination path per file (no in-place renames)
- * - Replaces tokens in file contents
- * - Copies binary files as-is (no tokenization)
- */
-async function renderTemplateDir(templateDir: string, targetDir: string, tokens: Record<string, string>) {
-    const patterns = ["**/*", "!**/node_modules/**"];
-    console.log("TEMPLATE ROOT:", templateDir);
-    console.log("DIR ENTRIES (level 1):", fs.readdirSync(templateDir));
-    const entries = await fg(patterns, { cwd: templateDir, dot: true, onlyFiles: false });
-
-    for (const rel of entries) {
-        const src = path.join(templateDir, rel);
-        const stat = fs.statSync(src);
-
-        // Compute final path up front (this is the key difference!)
-        const destRel = renderPath(rel, tokens);
-        const dest = path.join(targetDir, destRel);
-
-        if (stat.isDirectory()) {
-            await fse.ensureDir(dest);
-            continue;
-        }
-
-        // Decide if we treat as text or binary by extension
-        const isBinary =
-            /\.(png|jpe?g|gif|bmp|ico|webp|woff2?|ttf|eot|pdf)$/i.test(rel);
-
-        await fse.ensureDir(path.dirname(dest));
-
-        if (isBinary) {
-            await fse.copy(src, dest);
-        } else {
-            const txt = fs.readFileSync(src, "utf8");
-            const rendered = renderContent(txt, tokens);
-            fs.writeFileSync(dest, rendered, "utf8");
-        }
-    }
-}
-
-// -------- utils
-
-function run(cmd: string, args: string[], cwd?: string) {
-    return new Promise<void>((resolve, reject) => {
-        const child = spawn(cmd, args, { cwd, stdio: "inherit", shell: process.platform === "win32" });
-        child.on("exit", (code) => (code === 0 ? resolve() : reject(new Error(`${cmd} ${args.join(" ")} failed (${code})`))));
-    });
-}
-
-function detectPM(): "pnpm" | "yarn" | "npm" {
-    const pm = whichPmRuns()?.name;
-    return pm === "pnpm" || pm === "yarn" ? pm : "npm";
-}
-
-
-
-function pascalToCamel(str: string): string {
-    return str.charAt(0).toLowerCase() + str.slice(1);
-}
-
-
-
-
-function printSplash() {
-  if (!process.stdout.isTTY) return; // skip in non-interactive CI
-  const art = String.raw`
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-@@@@@@@@#+##@@@@@@@@@%**@@@@@@@@@@@@@@@@@@@@@@@@@@
-@@@@@@@@#=-=@@@@@@@@@*=-+@@@@@@@@@@@@@@@@@@@@@@@@@
-@@@@@@@@@%+=%@@@@@@@@#*+=@@@@@@@@@@#**@@@@@@@@@@@@
-@@@@@@@@@@@+=%@@@@@%%%%**@@@@@@@@@@+=#@@@@@@@@@@@@
-@@@@@@@@@@@%+-**+*%%%%@%%##%%@@@@#*#%@@@@@@@@@@@@@
-@@@@@@@@@@@@%*=-=*@@@%%%@%%@*==*+=#@@@@@@@@@@@@@@@
-@@@@@@@@@@@@@@@@@@@@@%%%%@@@@%*+#@@@@@@@@@@@@@@@@@
-@@@@@@@@@@@@@@@@@@@@@@%%%%@@@@@@@@@@@@@@@@@@@@@@@@
-@@@@@@@@@@@@@@@@@@@@@@@%##@@@@@@@@@@@@%%%###%@@@@@
-@@@@@@@@@@@@@@@@@@@@@@@@%%@@@@@%###**********@@@@@
-@@@@@@@@@@@@@@@@@@@@%%%%%%@@#+-::+**********#@@@@@
-@@@@@@@@@@@@@@@@@@@@%%%@@@*-:....-**********%@@@@@
-@@@@@@@@@@@@@@@@@@@@@%%@@#-.......:+********@@@@@@
-@@@@@@@@@@@@@@@@@@@@@%#@+:...:::...:-+*****#@@@@@@
-@@@@@@@@@@@@@@@@@@@@@%#=::::+*#**=...:-=++*@@@@@@@
-@@@@@@@@@@@@@@@@@@@%%%*::::+##*###-::::::-#@@@@@@@
-@@@@@@@@@@@@@%%###*+@%=::::=*####*::::::-#@@@@@@@@
-@@@@@@@@@@%#*****+=%@#-:::::-=++=::::::-#@@@@@@@@@
-@@@@@@@@#*******+-+@@+=+=-:::::::::::-=%@@@@@@@@@@
-@@@@@@@@@@%%#**+=-*@%*###*----------=#@@@@@@@@@@@@
-@@@@@@@@@@@@@@%=--#@#+*##*--------=#@@@@@@@@@@@@@@
-@@@@@@@@@@@@@@%=--%@*--==-------+#@@@@@@@@@@@@@@@@
-@@@@@@@@@@@@%#*=--*%+--------=+%@@@@@@@@@@@@@@@@@@
-@@@@@@@@@@@#***+=-=**-----=++*#@@@@@@@@@@@@@@@@@@@
-@@@@@@@@@*==*****++=+++++*****#@@@@@@@@@@@@@@@@@@@
-@@@@@@@#--+********%@@@@#*****%@@@@@@@@@@@@@@@@@@@
-@@@@@@#:-++++*++#%%@@@@@@****#@@@@@@@@@@@@@@@@@@@@
-@@@@@@-:===+===#@@@@@@@@@#**%@@@@@@@@@@@@@@@@@@@@@
-@@@@@*::----+#@@@@@@@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@
-@@@@@+-=+*#%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@`;
-  // Optional clear screen (comment out if you prefer no clear):
-  process.stdout.write("\x1Bc");
-  console.log(art);
-  console.log("\nWelcome to the Microsoft 365 SPFx Generator@1.21.1");
-  console.log("──────────────────────────────────────────────────\n");
-}
-
-
-
-// -------- main
 
 async function main() {
-    const noSplash = process.argv.includes("--no-splash");
-    if (!noSplash) printSplash();
-
-    // Optional guard: SPFx 1.21.x is fine on Node 22, warn if not
-    const major = parseInt(process.versions.node.split(".")[0], 10);
-    if (major !== 22) {
-        console.warn(`SPFx 1.21.x expects Node 22 LTS; you're on ${process.version}.`);
-    }
-
-    // Parse first positional arg as the folder name (ignore flags)
-    const argName = process.argv.slice(2).find(a => !a.startsWith("-"));
-
-    // Compute a safe default from cwd
-    const cwdBase = path.basename(process.cwd());
-    const safeDefault = cwdBase.replace(/[^a-zA-Z0-9-_]/g, "") || "my-spfx-solution";
-
-    // TODO: Default the solution name to the current folder name?
-    const cwdName = path.basename(process.cwd());
-    const answers = await prompts([
-        {   type: "text", 
-            name: "solutionName", 
-            message: "What is your solution name?", 
-            initial: safeDefault, 
-            validate: v => /^[a-zA-Z0-9-_]+$/.test(v) ? true : "Alphanumerics, dash, underscore only." 
+    const argv = minimist(process.argv.slice(2), {
+        string: ["template", "variant", "name", "pm"],
+        boolean: ["skip-install", "no-install", "force"],
+        alias: {
+            t: "template",
+            v: "variant",
+            n: "name",
+            i: "install",
+            f: "force",
+            "skip-install": "no-install" // treat both as the same
         },
-        {
-            type: "select",
-            name: "componentType",
-            message: "Which type of client-side component do you wish to create?",
-            choices: [
-                { title: "WebPart", value: "webpart" },
-                { title: "Extension", value: "extension" },
-                { title: "Library", value: "library" },
-                { title: "Adaptive Card Extension", value: "ace" }
-            ],
-            initial: 0
-        },
-        {
-            // only ask this if componentType === "webpart"
-            type: prev => (prev === "webpart" ? "select" : null),
-            name: "template",
-            message: "Which template would you like to use?",
-            choices: [
-                { title: "Minimal", value: "minimal" },
-                { title: "No framework", value: "no-framework" },
-                { title: "React", value: "react" }
-            ],
-            initial: 0
-        },
-        {
-            // only ask this if componentType === "extension"
-            type: prev => (prev === "extension" ? "select" : null),
-            name: "template",
-            message: "Which type of client-side extension would you like to create?",
-            choices: [
-                { title: "Application Customizer", value: "app-customizer" },
-                { title: "Field Customizer", value: "field-customizer" },
-                { title: "ListView Command Set", value: "listview-command-set" },
-                { title: "Form Customizer", value: "form-customizer" },
-                { title: "Search Query Modifier", value: "search-query-modifier" },
-            ],
-            initial: 0
-        },
-        {
-            // only ask this if componentType === "ace"
-            type: prev => (prev === "ace" ? "select" : null),
-            name: "template",
-            message: "Which template do you want to use?",
-            choices: [
-                { title: "Generic Card Template", value: "generic-card" },
-                { title: "Search Card Template", value: "search-card" },
-                { title: "Data Visualization Template", value: "data-visualization" },
-            ],
-            initial: 0
-        },
-        { type: "text", name: "componentName", message: "What is your Web part name?", initial: "HelloWorld", validate: v => /^[A-Za-z]\w*$/.test(v) ? true : "Start with a letter; alphanumerics/underscore only." },
-        { type: "toggle", name: "install", message: "Install dependencies?", initial: true, active: "yes", inactive: "no" }
-    ], { onCancel: () => process.exit(1) });
+        default: {}
+    });
 
-    const solutionName = paramCase(answers.solutionName);
-    const componentPascal = pascalCase(answers.componentName);
-    const solutionTitle = sentenceCase(answers.solutionName);
+    const positionalTarget = argv._[0] as string | undefined;
+    const targetDir = path.resolve(process.cwd(), positionalTarget ?? ".");
 
-    const tokens = {
-        SOLUTION_NAME: solutionName,
-        SOLUTION_TITLE: solutionTitle,
-        SOLUTION_ID: uuidv4().toUpperCase(),
-        FEATURE_ID: uuidv4().toUpperCase(),
-        COMPONENT_PASCAL: componentPascal,
-        COMPONENT_ID: uuidv4().toUpperCase(),
-        COMPONENT_CAMEL: pascalToCamel(componentPascal)
+    const hasInstall = Object.prototype.hasOwnProperty.call(argv, "install");
+    const hasSplash = Object.prototype.hasOwnProperty.call(argv, "splash");
+
+    const install =
+        hasInstall
+            // If provided, coerce "false"/"0" to false; everything else true (bare --install => true)
+            ? (typeof argv.install === "string"
+                ? !/^(false|0)$/i.test(argv.install)
+                : Boolean(argv.install))
+            : undefined;
+
+    const splash =
+        hasSplash
+            // If provided, coerce "false"/"0" to false; everything else true (bare --splash => true)
+            ? (typeof argv["splash"] === "string"
+                ? !/^(false|0)$/i.test(argv["splash"])
+                : Boolean(argv["splash"]))
+            : true; // default true
+
+    const skipInstall = argv["skip-install"] === true || argv["no-install"] === true;
+
+    const opts: Options = {
+        template: argv.template,
+        variant: argv.variant,
+        name: argv.name,
+        pm: argv.pm,
+        install,
+        skipInstall,
+        force: argv.force ?? false
     };
 
-    const templateDir = getTemplateDir(answers);
-    
-    const targetDir = path.resolve(process.cwd(), solutionName === "." ? "" : solutionName);
+    const isExisting = await isExistingSolution(targetDir);
 
-
-    if (fs.existsSync(targetDir) && fs.readdirSync(targetDir).length > 0) {
-        console.error(`Target directory "${solutionName}" is not empty.`);
-        process.exit(1);
+    if (!isExisting) {
+        await checkNodeForSpfx({ allowWarn: true });
     }
 
-    console.log(`\nCreating ${solutionName} in ${targetDir}...\n`);
+    if (splash !== false) {
+        showSplash("Welcome to the SPFx generator", "v1.21.1");
+    }
 
-    await renderTemplateDir(templateDir, targetDir, tokens);
+    await promptMissing(opts, { isExisting });
 
-    if (answers.install) {
-        const pm = detectPM();
-        console.log(`\nInstalling dependencies with ${pm}...\n`);
-        try {
-            if (pm === "pnpm") await run("pnpm", ["install"], targetDir);
-            else if (pm === "yarn") await run("yarn", [], targetDir);
-            else await run("npm", ["install"], targetDir);
-        } catch {
-            console.warn("Install failed. Run it manually later.");
+    const pm = opts.pm ?? detectPM();
+
+    if (!isExisting) {
+        await scaffoldNewSolution({
+            targetDir,
+            template: opts.template!,
+            variant: opts.variant!,
+            name: opts.name!,
+            pm
+        });
+
+        await ensureGulpInTemplate(targetDir);
+
+        // decide install after prompts + flags
+        const shouldInstall = computeShouldInstall(opts);
+        if (shouldInstall) {
+            console.log(yellow("\nInstalling project dependencies..."));
+            await installDeps({ cwd: targetDir, pm });
         }
-    }
 
-  console.log(`\nCongratulations!\nSolution ${solutionName} is created.\nRun gulp serve to play with it!\n`);
+        console.log(green("\n✔ All set!"));
+        console.log(`\nNext steps:`);
+        const cdPath = path.relative(process.cwd(), targetDir) || ".";   
+        if (cdPath !== ".") {    
+            console.log(`${bold(cyan(`  cd ${cdPath}`))}`);
+        }
+        if (!shouldInstall) {
+            console.log(`${bold(cyan(`  ${pm} install`))}`);
+        }
+        console.log(`${bold(cyan(`  gulp serve`))}\n`);
+    } else {
+        await addComponent({
+            targetDir,
+            template: opts.template!,
+            variant: opts.variant!,
+            name: opts.name!
+        });
+
+        const shouldInstall = computeShouldInstall(opts);
+        if (shouldInstall) {
+            console.log(yellow("\nInstalling updated dependencies..."));
+            await installDeps({ cwd: targetDir, pm });
+        }
+
+        console.log(green("\n✔ Component added."));
+        console.log(`\nTry:\n  ${bold(cyan(`gulp serve`))}\n`);
+    }
+}
+
+function computeShouldInstall(opts: Options): boolean {
+    if (opts.skipInstall) return false;                 // explicit skip
+    if (typeof opts.install === "boolean") return opts.install; // explicit force OR prompt answer
+    return true; // fallback (shouldn’t happen because prompt sets it), keep default-to-yes
+}
+
+async function isExistingSolution(dir: string): Promise<boolean> {
+    const pkgJsonPath = path.join(dir, "package.json");
+    if (!fs.existsSync(pkgJsonPath)) return false;
+    try {
+        const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8"));
+        const hasSpfx =
+            (pkg.dependencies && Object.keys(pkg.dependencies).some(k => k.startsWith("@microsoft/sp-"))) ||
+            (pkg.devDependencies && Object.keys(pkg.devDependencies).some(k => k.startsWith("@microsoft/sp-")));
+        const hasConfig = fs.existsSync(path.join(dir, "config", "package-solution.json"));
+        const hasGulp = fs.existsSync(path.join(dir, "gulpfile.js"));
+        return hasSpfx && hasConfig && hasGulp;
+    } catch {
+        return false;
+    }
 }
 
 main().catch((e) => {
-    console.error(e);
+    console.error(red(`\n✖ ${e?.message ?? e}`));
     process.exit(1);
 });
+
