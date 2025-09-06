@@ -10,7 +10,8 @@ export async function scaffoldNewSolution(args) {
         FEATURE_ID: newUpperGuid(),
         COMPONENT_PASCAL: toPascalCase(args.name),
         COMPONENT_CAMEL: toCamelCase(args.name),
-        COMPONENT_ID: newUpperGuid()
+        COMPONENT_ID: newUpperGuid(),
+        NODE_VERSION: process.versions.node.split(".")[0]
     };
     // 1) base skeleton
     await copyDirWithTransforms(resolveSolutionTemplate(), args.targetDir, tokens, { mode: "create" });

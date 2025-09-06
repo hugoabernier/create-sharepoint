@@ -74,12 +74,12 @@ async function main() {
 
     const isExisting = await isExistingSolution(targetDir);
 
-    if (!isExisting) {
-        await checkNodeForSpfx({ allowWarn: true });
-    }
-
     if (splash !== false) {
         showSplash("Welcome to the SPFx generator", "v1.21.1");
+    }
+
+    if (!isExisting) {
+        await checkNodeForSpfx({ allowWarn: true });
     }
 
     await promptMissing(opts, { isExisting });

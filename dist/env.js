@@ -4,6 +4,7 @@ import path from "path";
 export async function checkNodeForSpfx(opts) {
     const required = "22.0.0";
     const cur = process.versions.node;
+    console.log(`Node.js version ${cur} detected.`);
     if (semver.lt(semver.coerce(cur), required)) {
         const msg = `SPFx 1.21.1 requires Node >= ${required}. You are on ${cur}. You can scaffold now, but you must use Node >= ${required} to build/run.`;
         if (opts.allowWarn)

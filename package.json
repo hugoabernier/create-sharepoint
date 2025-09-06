@@ -1,6 +1,6 @@
 {
   "name": "@hugoabernier/create-sharepoint",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Modern create-style scaffolder for SPFx 1.21.x (new solution or add component).",
   "type": "module",
   "bin": {
