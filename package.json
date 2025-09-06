@@ -17,7 +17,7 @@
   "author": "Hugo Bernier",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/<you>/create-sharepoint.git"
+    "url": "git+https://github.com/hugoabernier/create-sharepoint.git"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
