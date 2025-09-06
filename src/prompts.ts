@@ -3,7 +3,7 @@ import prompts, { PromptObject } from "prompts";
 import { TemplateType, VARIANT_CHOICES, variantLabel } from "./templates.js";
 
 export async function promptMissing(
-  opts: { template?: TemplateType; variant?: string; name?: string; install?: boolean; skipInstall?: boolean },
+  opts: { template?: TemplateType; variant?: string; name?: string; install?: boolean; skipInstall?: boolean, templateUrl?: string },
   ctx: { isExisting: boolean }
 ) {
   const questions: PromptObject[] = [];
@@ -36,7 +36,7 @@ export async function promptMissing(
       name: "variant",
       message: (prev, values) => {
         const t = (opts.template ?? values.template) as TemplateType;
-        if (t === "webpart") return "Which template would you like to use?";
+        if (t === "webpart") return "Which template type would you like to use?";
         if (t === "extension") return "Which type of client-side extension would you like to create?";
         if (t === "adaptive-card-extension") return "Which template do you want to use?";
         return "Select a variant";
@@ -76,8 +76,10 @@ export async function promptMissing(
     questions.push({
       type: "confirm",
       name: "install",
-      message: "Install dependencies now?",
-      initial: true // default = Yes
+      message: "Install dependencies?",
+      initial: true, // default = Yes,
+      active: "yes",
+      inactive: "no"
     });
   }
 
@@ -85,7 +87,7 @@ export async function promptMissing(
   const answers = await prompts(questions, {
     onCancel: () => {
       // Exit nicely on Ctrl+C
-      throw new Error("Aborted by user.");
+      throw new Error("Cancelled");
     }
   });
 
@@ -96,6 +98,27 @@ export async function promptMissing(
   if (answers.install !== undefined) opts.install = answers.install;
 }
 
-
+export async function promptFromRemoteTemplate(
+  opts: { template?: TemplateType; variant?: string; name?: string; install?: boolean; skipInstall?: boolean, templateUrl?: string },
+  ctx: { isExisting: boolean }
+) {
+  // For now, this is simulated
+  const response = await prompts([
+    {
+      type: "select",
+      name: "template",
+      message: "Select a Takeda corporate web part template:",
+      choices: [
+        { title: "News Carousel", value: "news-carousel" },
+        { title: "Events Calendar", value: "events-calendar" },
+        { title: "Employee Directory", value: "employee-directory" },
+        { title: "Custom Links", value: "custom-links" },
+        { title: "KPI Dashboard", value: "kpi-dashboard" }
+      ],
+      initial: 0
+    }
+  ]);
+  return response.template;
+}
 
 

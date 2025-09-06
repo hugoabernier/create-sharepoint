@@ -5,13 +5,13 @@ import minimist from "minimist";
 import { bold, cyan, green, red, yellow } from "kolorist";
 import { checkNodeForSpfx, ensureGulpInTemplate } from "./env.js";
 import { detectPM, installDeps } from "./pm.js";
-import { promptMissing } from "./prompts.js";
+import { promptMissing, promptFromRemoteTemplate } from "./prompts.js";
 import { showSplash } from "./splash.js";
 import { scaffoldNewSolution } from "./scaffold-solution.js";
 import { addComponent } from "./add-component.js";
 async function main() {
     const argv = minimist(process.argv.slice(2), {
-        string: ["template", "variant", "name", "pm"],
+        string: ["template", "variant", "name", "pm", "template-url",],
         boolean: ["skip-install", "no-install", "force"],
         alias: {
             t: "template",
@@ -40,6 +40,7 @@ async function main() {
             : Boolean(argv["splash"]))
         : true; // default true
     const skipInstall = argv["skip-install"] === true || argv["no-install"] === true;
+    const templateUrl = argv["template-url"];
     const opts = {
         template: argv.template,
         variant: argv.variant,
@@ -47,7 +48,8 @@ async function main() {
         pm: argv.pm,
         install,
         skipInstall,
-        force: argv.force ?? false
+        force: argv.force ?? false,
+        templateUrl
     };
     const isExisting = await isExistingSolution(targetDir);
     if (splash !== false) {
@@ -56,7 +58,13 @@ async function main() {
     if (!isExisting) {
         await checkNodeForSpfx({ allowWarn: true });
     }
-    await promptMissing(opts, { isExisting });
+    if (opts.templateUrl) {
+        console.log(yellow(`Using custom template URL: ${bold(opts.templateUrl)}\n`));
+        await promptFromRemoteTemplate(opts, { isExisting });
+    }
+    else {
+        await promptMissing(opts, { isExisting });
+    }
     const pm = opts.pm ?? detectPM();
     if (!isExisting) {
         await scaffoldNewSolution({

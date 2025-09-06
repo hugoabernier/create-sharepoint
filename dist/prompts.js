@@ -33,7 +33,7 @@ export async function promptMissing(opts, ctx) {
             message: (prev, values) => {
                 const t = (opts.template ?? values.template);
                 if (t === "webpart")
-                    return "Which template would you like to use?";
+                    return "Which template type would you like to use?";
                 if (t === "extension")
                     return "Which type of client-side extension would you like to create?";
                 if (t === "adaptive-card-extension")
@@ -76,15 +76,17 @@ export async function promptMissing(opts, ctx) {
         questions.push({
             type: "confirm",
             name: "install",
-            message: "Install dependencies now?",
-            initial: true // default = Yes
+            message: "Install dependencies?",
+            initial: true, // default = Yes,
+            active: "yes",
+            inactive: "no"
         });
     }
     // Run prompts (with graceful cancel)
     const answers = await prompts(questions, {
         onCancel: () => {
             // Exit nicely on Ctrl+C
-            throw new Error("Aborted by user.");
+            throw new Error("Cancelled");
         }
     });
     // Merge back (only set fields that were missing)
@@ -96,4 +98,23 @@ export async function promptMissing(opts, ctx) {
         opts.name = answers.name;
     if (answers.install !== undefined)
         opts.install = answers.install;
+}
+export async function promptFromRemoteTemplate(opts, ctx) {
+    // For now, this is simulated
+    const response = await prompts([
+        {
+            type: "select",
+            name: "template",
+            message: "Select a Takeda corporate web part template:",
+            choices: [
+                { title: "News Carousel", value: "news-carousel" },
+                { title: "Events Calendar", value: "events-calendar" },
+                { title: "Employee Directory", value: "employee-directory" },
+                { title: "Custom Links", value: "custom-links" },
+                { title: "KPI Dashboard", value: "kpi-dashboard" }
+            ],
+            initial: 0
+        }
+    ]);
+    return response.template;
 }
