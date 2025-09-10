@@ -6,8 +6,23 @@ A modern, batteries-included scaffolder for **SharePoint Framework (SPFx)** proj
 - **Add a new component** to an existing SPFx solution (safely avoids overwriting protected files).
 - Detect your package manager, wire up **gulp** scripts, and (optionally) install dependencies.
 
-> It is a prototype for an open-source SPFx scaffolder, inspired by [Create React App](https://create-react-app.dev/) and [Create Next App](https://nextjs.org/docs/api-reference/create-next-app).
+> It is a prototype for an open-source SPFx scaffolder, inspired by [Create React App](https://create-react-app.dev/) and [Create Next App](https://nextjs.org/docs/api-reference/create-next-app), Vite, Next.js, Remix, WordPress/Create-Block, etc.
 ---
+
+## Why?
+
+Scaffolding new projects can be repetitive, error-prone, and inconsistent across teams. A **`create-` CLI** standardizes this process, giving developers a predictable, one-liner experience for bootstrapping solutions.  
+
+The **JavaScript ecosystem already embraces this convention**: any package published with the `create-` prefix is automatically recognized by major package managers (`npm`, `npx`, `pnpm`, and `yarn`). This means you don’t need to install global generators, configure paths, or remember complex commands—just run:
+
+```bash
+npm create <package>
+```
+
+…and your package manager will automatically resolve and run the `create-` CLI for you.  
+
+This CLI, `create-sharepoint`, leverages that convention to make creating and extending **SharePoint Framework (SPFx)** projects effortless and repeatable.
+
 
 ## Quick start
 
@@ -119,7 +134,7 @@ npm|pnpm|yarn create @hugoabernier/sharepoint [targetDir] [options]
 | `--no-install` |  | boolean |  |  | new/add | Skip installing dependencies. Alias: `--skip-install`. |
 | `--skip-install` |  | boolean |  |  | new/add | Same as `--no-install`. |
 | `--force` | `-f` | boolean |  | `false` | new/add | Proceed even if target contains files (use carefully). |
-| `--template-url` |  | string (URL) | e.g., `https://…/my-template.zip` |  | new/add | Use a remote template source (advanced). |
+| `--template-url` |  | string (URL) | e.g., `https://…/my-templates` |  | new/add | Use a remote template source (advanced). |
 | `--splash` |  | boolean | `true`/`false` | `true` | new/add | Show/hide the startup splash. Accepts `--splash=false`. |
 
 > Booleans accept `true/false` or `1/0`. Bare `--flag` is treated as **true**.
